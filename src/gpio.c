@@ -39,6 +39,7 @@ struct gpio_ops {
     unsigned int (*line)(gpio_t *gpio);
     int (*fd)(gpio_t *gpio);
     int (*name)(gpio_t *gpio, char *str, size_t len);
+    int (*label)(gpio_t *gpio, char *str, size_t len);
     int (*chip_fd)(gpio_t *gpio);
     int (*chip_name)(gpio_t *gpio, char *str, size_t len);
     int (*chip_label)(gpio_t *gpio, char *str, size_t len);
@@ -147,6 +148,10 @@ int gpio_fd(gpio_t *gpio) {
 
 int gpio_name(gpio_t *gpio, char *str, size_t len) {
     return gpio->ops->name(gpio, str, len);
+}
+
+int gpio_label(gpio_t *gpio, char *str, size_t len) {
+    return gpio->ops->label(gpio, str, len);
 }
 
 int gpio_chip_fd(gpio_t *gpio) {
@@ -487,6 +492,11 @@ static int gpio_sysfs_name(gpio_t *gpio, char *str, size_t len) {
     return 0;
 }
 
+static int gpio_sysfs_label(gpio_t *gpio, char *str, size_t len) {
+    strncpy(str, "", len);
+    return 0;
+}
+
 static int gpio_sysfs_chip_fd(gpio_t *gpio) {
     return _gpio_error(gpio, GPIO_ERROR_UNSUPPORTED, 0, "GPIO of type sysfs has no chip fd");
 }
@@ -596,6 +606,7 @@ static const struct gpio_ops gpio_sysfs_ops = {
     .line = gpio_sysfs_line,
     .fd = gpio_sysfs_fd,
     .name = gpio_sysfs_name,
+    .label = gpio_sysfs_label,
     .chip_fd = gpio_sysfs_chip_fd,
     .chip_name = gpio_sysfs_chip_name,
     .chip_label = gpio_sysfs_chip_label,
@@ -891,6 +902,20 @@ static int gpio_cdev_name(gpio_t *gpio, char *str, size_t len) {
     return 0;
 }
 
+static int gpio_cdev_label(gpio_t *gpio, char *str, size_t len) {
+    struct gpioline_info line_info = {0};
+
+    line_info.line_offset = gpio->u.cdev.line;
+
+    if (ioctl(gpio->u.cdev.chip_fd, GPIO_GET_LINEINFO_IOCTL, &line_info) < 0)
+        return _gpio_error(gpio, GPIO_ERROR_QUERY, errno, "Querying GPIO line info for line %u", gpio->u.cdev.line);
+
+    strncpy(str, line_info.consumer, len);
+    str[len - 1] = '\0';
+
+    return 0;
+}
+
 static int gpio_cdev_chip_fd(gpio_t *gpio) {
     return gpio->u.cdev.chip_fd;
 }
@@ -977,6 +1002,7 @@ static const struct gpio_ops gpio_cdev_ops = {
     .line = gpio_cdev_line,
     .fd = gpio_cdev_fd,
     .name = gpio_cdev_name,
+    .label = gpio_cdev_label,
     .chip_fd = gpio_cdev_chip_fd,
     .chip_name = gpio_cdev_chip_name,
     .chip_label = gpio_cdev_chip_label,
