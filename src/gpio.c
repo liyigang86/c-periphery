@@ -951,6 +951,8 @@ static int gpio_cdev_tostring(gpio_t *gpio, char *str, size_t len) {
     const char *edge_str;
     char line_name[32];
     const char *line_name_str;
+    char line_label[32];
+    const char *line_label_str;
     char chip_name[32];
     const char *chip_name_str;
     char chip_label[32];
@@ -975,6 +977,11 @@ static int gpio_cdev_tostring(gpio_t *gpio, char *str, size_t len) {
     else
         line_name_str = line_name;
 
+    if (gpio_cdev_label(gpio, line_label, sizeof(line_label)) < 0)
+        line_label_str = "<error>";
+    else
+        line_label_str = line_label;
+
     if (gpio_cdev_chip_name(gpio, chip_name, sizeof(chip_name)) < 0)
         chip_name_str = "<error>";
     else
@@ -985,8 +992,8 @@ static int gpio_cdev_tostring(gpio_t *gpio, char *str, size_t len) {
     else
         chip_label_str = chip_label;
 
-    return snprintf(str, len, "GPIO %u (name=\"%s\", line_fd=%d, chip_fd=%d, direction=%s, edge=%s, chip_name=\"%s\", chip_label=\"%s\", type=cdev)",
-                    gpio->u.cdev.line, line_name_str, gpio->u.cdev.line_fd, gpio->u.cdev.chip_fd, direction_str, edge_str, chip_name_str, chip_label_str);
+    return snprintf(str, len, "GPIO %u (name=\"%s\", label=\"%s\", line_fd=%d, chip_fd=%d, direction=%s, edge=%s, chip_name=\"%s\", chip_label=\"%s\", type=cdev)",
+                    gpio->u.cdev.line, line_name_str, line_label_str, gpio->u.cdev.line_fd, gpio->u.cdev.chip_fd, direction_str, edge_str, chip_name_str, chip_label_str);
 }
 
 static const struct gpio_ops gpio_cdev_ops = {
